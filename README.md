@@ -1,25 +1,25 @@
-# Générateur de Bruit de Perlin - Unreal Engine 5
+# Perlin Noise Generator - Unreal Engine 5
 
 ## Description
-Ce projet implémente un générateur de bruit de Perlin dans Unreal Engine 5. Il permet de générer des textures procédurales basées sur le bruit de Perlin, avec support pour plusieurs octaves et persistance personnalisable. Les textures générées sont automatiquement sauvegardées en tant qu'assets dans le projet UE5.
+This project implements a Perlin noise generator in Unreal Engine 5. It allows for the generation of procedural textures based on Perlin noise, with support for multiple octaves and customizable persistence. Generated textures are automatically saved as assets in the UE5 project.
 
-## Fonctionnalités
-- Génération de bruit de Perlin 2D
-- Support multi-octaves pour plus de détails
-- Contrôle de la fréquence et de la persistance
-- Sauvegarde automatique des textures générées
-- Seed personnalisable pour la reproduction des résultats
-- Interpolation lisse entre les points de la grille
-- Support pour différentes tailles de texture
+## Features
+- 2D Perlin noise generation
+- Multi-octave support for additional detail
+- Frequency and persistence control
+- Automatic texture saving
+- Customizable seed for result reproduction
+- Smooth interpolation between grid points
+- Support for various texture sizes
 
-## Structure du Projet
+## Project Structure
 
-### Classes Principales
+### Main Classes
 
 #### APerlinNoise
-Classe principale héritant de AActor, responsable de la génération du bruit de Perlin.
+Main class inheriting from AActor, responsible for Perlin noise generation.
 
-Structures de données :
+Data structures:
 ```cpp
 struct FPerlin_cell {
     TArray<FVector> gradient_vector;
@@ -33,22 +33,22 @@ struct FPerlin_array {
 };
 ```
 
-### Paramètres Configurables
-- `frequency` (float) : Contrôle la fréquence du bruit (défaut : 0.05)
-- `octave` (float) : Nombre d'octaves pour le bruit (défaut : 4.0)
-- `persistance` (float) : Contrôle la persistence entre les octaves (défaut : 0.5)
-- `seed` (int32) : Valeur de seed pour la génération aléatoire
+### Configurable Parameters
+- `frequency` (float): Controls noise frequency (default: 0.05)
+- `octave` (float): Number of noise octaves (default: 4.0)
+- `persistance` (float): Controls persistence between octaves (default: 0.5)
+- `seed` (int32): Seed value for random generation
 
-## Utilisation
+## Usage
 
-### Dans Blueprint
-1. Placez un APerlinNoise actor dans votre niveau
-2. Appelez la fonction `SetSeed` pour définir une seed
-3. Utilisez `GeneratePerlinNoise2D` en spécifiant :
-   - TextureSize : Dimensions de la texture (FVector2D)
-   - AssetPath : Chemin de sauvegarde dans le content browser
+### In Blueprint
+1. Place an APerlinNoise actor in your level
+2. Call the `SetSeed` function to set a seed
+3. Use `GeneratePerlinNoise2D` by specifying:
+   - TextureSize: Texture dimensions (FVector2D)
+   - AssetPath: Save path in the content browser
 
-### En C++
+### In C++
 ```cpp
 APerlinNoise* PerlinGenerator = SpawnActor<APerlinNoise>();
 PerlinGenerator->SetSeed(12345);
@@ -59,29 +59,29 @@ UTexture2D* NoiseTexture = PerlinGenerator->GeneratePerlinNoise2D(
 );
 ```
 
-## Détails Techniques
+## Technical Details
 
-### Algorithme
-1. Génération d'une grille de vecteurs de gradient uniformément distribués
-2. Calcul des produits scalaires aux coins de chaque cellule
-3. Interpolation lisse entre les valeurs (fonction quintic)
-4. Accumulation de plusieurs octaves avec persistance décroissante
-5. Normalisation des résultats dans l'intervalle [0, 1]
+### Algorithm
+1. Generation of uniformly distributed gradient vectors grid
+2. Calculation of dot products at each cell corner
+3. Smooth interpolation between values (quintic function)
+4. Accumulation of multiple octaves with decreasing persistence
+5. Normalization of results to [0, 1] range
 
-### Stockage des Textures
-Les textures sont sauvegardées au format BGRA8 avec les propriétés suivantes :
-- Pas de compression (TC_VectorDisplacementmap)
-- Pas de mipmaps
-- Pas de correction gamma (SRGB = false)
+### Texture Storage
+Textures are saved in BGRA8 format with the following properties:
+- No compression (TC_VectorDisplacementmap)
+- No mipmaps
+- No gamma correction (SRGB = false)
 
-## Notes d'Implémentation
-- Les vecteurs de gradient sont générés de manière cohérente entre les cellules adjacentes
-- L'interpolation utilise une fonction quintic pour une transition plus douce
-- La génération multi-octaves permet d'ajouter des détails à différentes échelles
-- Les textures sont automatiquement sauvegardées dans le projet UE5
+## Implementation Notes
+- Gradient vectors are generated consistently between adjacent cells
+- Interpolation uses a quintic function for smoother transitions
+- Multi-octave generation adds detail at different scales
+- Textures are automatically saved in the UE5 project
 
-## Optimisations Possibles
-- Implémentation de la génération sur GPU
-- Cache des valeurs de gradient pour réutilisation
-- Support pour la génération en temps réel
-- Parallélisation de la génération pour les grandes textures
+## Possible Optimizations
+- GPU-based generation implementation
+- Gradient value caching for reuse
+- Real-time generation support
+- Parallelization of generation for large textures
