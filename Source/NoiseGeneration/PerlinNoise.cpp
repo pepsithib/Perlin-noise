@@ -19,7 +19,7 @@
 #include<chrono>
 
 #define M_PI 3.141592
-
+#define MIN_SIZE 257
 
 APerlinNoise::APerlinNoise()
 {
@@ -31,108 +31,59 @@ void APerlinNoise::SetSeed(int32 _Seed)
 	seed = _Seed;
 }
 
-FVector GenerateVector(std::mt19937 generator, std::uniform_real_distribution<double> uniform01) {
-    double theta = 2 * M_PI * uniform01(generator);
-    double phi = acos(2 * uniform01(generator) - 1);
-    double x = sin(phi) * cos(theta);
-    double y = sin(phi) * sin(theta);
-    double z = cos(phi);
-    return FVector(x, y, z);
 
-}
-
-void APerlinNoise::GenerateUniformVector(FPerlin_cell* cell)
-{
-    std::mt19937 generator(seed);
-    std::uniform_real_distribution<double> uniform01(0.0, 1.0);
-    if (cell->up != nullptr) {
-        cell->gradient_vector.Add(cell->up->gradient_vector[2]);
-    }else if (cell->left != nullptr) {
-        cell->gradient_vector.Add(cell->left->gradient_vector[1]);
-    }
-    else {
-        cell->gradient_vector.Add(GenerateVector(generator, uniform01));
-    }
-    seed += 1;
-    generator.seed(seed);
-    if (cell->up != nullptr) {
-        cell->gradient_vector.Add(cell->up->gradient_vector[3]);
-    }
-    else {
-        cell->gradient_vector.Add(GenerateVector(generator, uniform01));
-    }
-    seed += 1;
-    generator.seed(seed);
-    if (cell->left != nullptr) {
-        cell->gradient_vector.Add(cell->left->gradient_vector[3]);
-    }
-    else {
-        cell->gradient_vector.Add(GenerateVector(generator, uniform01));
-    }
-    seed += 1;
-    generator.seed(seed);
-    cell->gradient_vector.Add(GenerateVector(generator, uniform01));
-
-		
-    seed += 1;
-
-
-}
 
 float APerlinNoise::DotValue(FVector gradient_vector, int x1, int y1, float x, float y)
 {
-
     x = x - x1;
     y = y - y1;
     return (x * gradient_vector.X + y * gradient_vector.Y);
 }
 
-float APerlinNoise::GenerateOctavePerlinValue(float x, float y, int32 octaves, float persistence)
+float APerlinNoise::GenerateOctavePerlinValue(float _x, float _y, int32 _octaves, float _persistence, float _frequency)
 {
     float total = 0.0;
-    float used_frequency = frequency;
     float amplitude = 1.0;
     float maxValue = 0.0;
 
-    for (int i = 0; i < octaves; i++)
+    for (int i = 0; i < _octaves; i++)
     {
         
-        total += GeneratePerlinValue(x, y, OctaveGrids[i]) * amplitude;
-        frequency = frequency * 2.0;
+        total += GeneratePerlinValue(_x, _y, i, _frequency) * amplitude;
+        _frequency = _frequency * 2.0;
         maxValue += amplitude;
-        amplitude *= persistence;
+        amplitude *= _persistence;
     }
     total *= 3.f;
-    frequency = used_frequency;
+
     return total / maxValue;
 }
 
 
 
-float APerlinNoise::GeneratePerlinValue(float x, float y, TArray<FPerlin_array> _array)
+float APerlinNoise::GeneratePerlinValue(float _x, float _y, int _octave, float _frequency)
 {
-
     
     // Scale input coordinates with frequency
-    x = x * frequency;
-    y = y * frequency;
+    _x = _x * _frequency;
+    _y = _y * _frequency;
     
 
-    int x0 = FMath::FloorToInt(x) % _array[y].Array.Num();
+    int x0 = FMath::FloorToInt(_x);
     int x1 = x0 + 1;
-    int y0 = FMath::FloorToInt(y) % _array.Num();
+    int y0 = FMath::FloorToInt(_y);
     int y1 = y0 + 1;
 
-    float sx = x - x0;
-    float sy = y - y0;
+    float sx = _x - x0;
+    float sy = _y - y0;
     
 
 
     // Calculate dot products
-    float a1 = DotValue(_array[y0].Array[x0]->gradient_vector[0], x0, y0, x, y);
-    float a2 = DotValue(_array[y0].Array[x0]->gradient_vector[1], x1, y0, x, y);
-    float a3 = DotValue(_array[y0].Array[x0]->gradient_vector[2], x0, y1, x, y);
-    float a4 = DotValue(_array[y0].Array[x0]->gradient_vector[3], x1, y1, x, y);
+    float a1 = DotValue(GenerateVector(x0, y0, _octave), x0, y0, _x, _y);
+    float a2 = DotValue(GenerateVector(x1, y0, _octave), x1, y0, _x, _y);
+    float a3 = DotValue(GenerateVector(x0, y1, _octave), x0, y1, _x, _y);
+    float a4 = DotValue(GenerateVector(x1, y1, _octave), x1, y1, _x, _y);
     
     // Interpolate
     float b1 = FMath::Lerp(a1, a2, ((sx*6 - 15)*sx+10)*sx*sx*sx);
@@ -142,34 +93,21 @@ float APerlinNoise::GeneratePerlinValue(float x, float y, TArray<FPerlin_array> 
     return value;
 }
 
-TArray<FPerlin_array> APerlinNoise::GeneratePerlinGrid(FVector2D TextureSize)
+FVector APerlinNoise::GenerateVector(int _x, int _y, int _octave)
 {
-
-    TArray<FPerlin_array> value;
-
-	for (int y = 0; y < TextureSize.Y; ++y) {
-		value.Add(FPerlin_array());
-		for (int x = 0; x < TextureSize.X; ++x) {
-			
-			value[y].Array.Add(new FPerlin_cell());
-
-			if (y -1 >= 0) {
-				value[y].Array[x]->up = value[y - 1].Array[x];
-			}
-			if (x-1 >=0) {
-				value[y].Array[x]->left = value[y].Array[x - 1];
-			}
-
-			GenerateUniformVector(value[y].Array[x]);
-		}
-	}
-    return value;
+    std::mt19937 generator(((seed * 1518 + _x) * 1794 + _y)*1816 + _octave);
+    std::uniform_real_distribution<double> uniform(0.0, 1.0);
+    double theta = 2 * M_PI * uniform(generator);
+    double phi = acos(2 * uniform(generator) - 1);
+    double x = sin(phi) * cos(theta);
+    double y = sin(phi) * sin(theta);
+    double z = cos(phi);
+    return FVector(x, y, z);
 }
+
 
 UTexture2D* APerlinNoise::GeneratePerlinNoise2D(FVector2D TextureSize, FString AssetPath)
 {
-	GeneratePerlinGrid(TextureSize);
-   
     FString PackagePath = TEXT("/Game/") + AssetPath;
     UPackage* Package = CreatePackage(*PackagePath);
 
@@ -190,14 +128,8 @@ UTexture2D* APerlinNoise::GeneratePerlinNoise2D(FVector2D TextureSize, FString A
 
     // Lock the texture source for editing
     uint8* MipData = NoiseTexture->Source.LockMip(0);
-    OctaveGrids.Empty();
 
     // Generate a separate grid for each octave, but keep the same size
-    for (int o = 0; o < octave; o++) {
-        OctaveGrids.Add(GeneratePerlinGrid(TextureSize));
-        seed += 100 * o;
-    }
-
 
     // Generate and fill texture data
     for (int32 y = 0; y < SizeY; y++)
@@ -205,7 +137,7 @@ UTexture2D* APerlinNoise::GeneratePerlinNoise2D(FVector2D TextureSize, FString A
         for (int32 x = 0; x < SizeX; x++)
         {
             // Generate noise value for this pixel
-            float NoiseValue = GenerateOctavePerlinValue(x, y,octave,persistance);
+            float NoiseValue = GenerateOctavePerlinValue(x, y,octave,persistance,frequency);
 
             // Convert from [-1,1] to [0,255] range
             uint8 ColorIntensity = FMath::Clamp(((NoiseValue + 1.0f) / 2)*255,0,255);
